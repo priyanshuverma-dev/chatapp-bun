@@ -2,9 +2,10 @@ import { Context } from "hono";
 import { hash, compare } from "bcryptjs";
 import { sign } from "jsonwebtoken";
 import db from "../lib/db";
+import { Request, Response } from "express";
 
-export const getUser = async (c: Context) => {
-  const userId = c.get("userId");
+export const getUser = async (req: Request, res: Response) => {
+  const userId = req.headers["userId"] as string;
   console.log(`[INFO] User ID: ${userId}`);
 
   const user = await db.user.findUnique({
@@ -14,38 +15,36 @@ export const getUser = async (c: Context) => {
   });
 
   if (!user) {
-    return c.json({ message: "User not found" }, 404);
+    return res.status(404).json({ message: "User not found" });
   }
 
-  return c.json({
-    name: user.name,
+  return res.json({
+    id: user.id,
     email: user.email,
+    name: user.name,
   });
 };
 
-export const signUp = async (c: Context) => {
+export const signUp = async (req: Request, res: Response) => {
   try {
-    const { email, password, name } = await c.req.json();
+    const { email, password, name } = req.body;
 
     if (!email || !password) {
-      return c.json({ message: "Email, password are required" }, 400);
+      return res.status(400).json({ message: "Email, password are required" });
     }
 
     if (password.length < 6) {
-      return c.json(
-        { message: "Password must be at least 6 characters long" },
-        400
-      );
+      return res.status(400).json({
+        message: "Password must be at least 6 characters long",
+      });
     }
 
     const userExists = await db.user.findUnique({ where: { email } });
     if (userExists) {
-      return c.json({ message: "User already exists" }, 400);
+      return res.status(400).json({ message: "User already exists" });
     }
 
     const hashedPassword = await hash(password, 10);
-    console.log(`[INFO] Hashed password: ${hashedPassword}`);
-    console.log(`[INFO] User signed up with email: ${email}`);
 
     const user = await db.user.create({
       data: {
@@ -55,37 +54,40 @@ export const signUp = async (c: Context) => {
       },
     });
 
-    return c.json({ message: "User signed up successfully" });
+    return res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    });
   } catch (error: any) {
     console.log(`[ERROR] ${error}`);
-    return c.json({ message: error.message }, 400);
+    return res.status(400).json({ message: error.message });
   }
 };
 
-export const signIn = async (c: Context) => {
+export const signIn = async (req: Request, res: Response) => {
   try {
-    const { email, password } = await c.req.json();
+    const { email, password } = req.body;
 
     if (!email || !password) {
-      return c.json({ message: "Email, password are required" }, 400);
+      return res.status(400).json({ message: "Email, password are required" });
     }
 
     if (password.length < 6) {
-      return c.json(
-        { message: "Password must be at least 6 characters long" },
-        400
-      );
+      return res.status(400).json({
+        message: "Password must be at least 6 characters long",
+      });
     }
 
     const userExists = await db.user.findUnique({ where: { email } });
     if (!userExists) {
-      return c.json({ message: "User with email does't exist" }, 400);
+      return res.status(400).json({ message: "User not found" });
     }
 
     const isPasswordMatch = await compare(password, userExists.password);
 
     if (!isPasswordMatch) {
-      return c.json({ message: "Invalid password" }, 400);
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
     const jwtToken = sign(
@@ -97,9 +99,9 @@ export const signIn = async (c: Context) => {
       { expiresIn: "7d", algorithm: "HS256" }
     );
 
-    return c.json({ message: "User signed in successfully", jwt: jwtToken });
+    return res.json({ token: jwtToken });
   } catch (error: any) {
     console.log(`[ERROR] ${error}`);
-    return c.json({ message: error.message }, 400);
+    return res.status(400).json({ message: error.message });
   }
 };

@@ -1,17 +1,23 @@
+import { Request, Response } from "express";
 import { Context, Next } from "hono";
 
 import { verify } from "jsonwebtoken";
 
-export const authMiddleware = async (c: Context, next: Next) => {
+export const authMiddleware = async (
+  req: Request,
+  res: Response,
+  next: any
+) => {
   // Check if the request has an Authorization header
 
-  if (!c.req.header("Authorization")) {
-    return c.json({ error: "Unauthorized" }, 401);
+  if (!req.header("Authorization")) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const token = c.req.header("Authorization")?.split(" ")[1];
+  const token = req.header("Authorization")?.split(" ")[1];
+
   if (!token) {
-    return c.json({ error: "Unauthorized" }, 401);
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   try {
@@ -19,14 +25,13 @@ export const authMiddleware = async (c: Context, next: Next) => {
       algorithms: ["HS256"],
     });
 
-    c.set("userId", (payload as any).userId as string);
-
+    req.headers["userId"] = (payload as any).userId as string;
     console.log(`[INFO] User payload: ${(payload as any).userId as string}`);
   } catch (error) {
     console.log(`[ERROR] ${error}`);
-    return c.json({ error: "Unauthorized" }, 401);
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   // If the Authorization header is valid, call the next middleware
-  return next();
+  next();
 };
