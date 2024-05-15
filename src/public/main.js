@@ -1,5 +1,6 @@
-const socket = io();
-
+const socket = io({
+  query: "token={TOKEN}",
+});
 const clientsTotal = document.getElementById("client-total");
 
 const messageContainer = document.getElementById("message-container");
@@ -25,6 +26,7 @@ function sendMessage() {
     name: nameInput.value,
     message: messageInput.value,
     dateTime: new Date(),
+    recieverId: "all",
   };
   socket.emit("message", data);
   addMessageToUI(true, data);
