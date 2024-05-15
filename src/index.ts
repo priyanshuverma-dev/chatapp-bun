@@ -7,7 +7,7 @@ import cors from "cors";
 import path from "path";
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 
 const io = new Server(server);
@@ -25,8 +25,8 @@ app.get("/user/me", getUser);
 
 io.on("connection", onConnected);
 
-server.listen(port, () => {
-  console.log(`☁ Server running at http://localhost:${port}`);
+server.listen(PORT, () => {
+  console.log(`☁ Server running at http://localhost:${PORT}`);
 });
 
 function onConnected(socket: Socket) {
@@ -41,7 +41,6 @@ function onConnected(socket: Socket) {
   });
 
   socket.on("message", (data) => {
-    // console.log(data)
     socket.broadcast.emit("chat-message", data);
   });
 
